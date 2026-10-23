@@ -1,5 +1,6 @@
 # Variables de entorno (CRÍTICO)
 .env
+infra/.env
 
 # Go
 backend/vendor/
