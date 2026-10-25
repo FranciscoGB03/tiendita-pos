@@ -12,6 +12,7 @@ import (
 
 	"github.com/pgonbo/tiendita-pos/backend/internal/config"
 	"github.com/pgonbo/tiendita-pos/backend/internal/database"
+	"github.com/pgonbo/tiendita-pos/backend/internal/handlers" // Ajustado a internal
 )
 
 func main() {
@@ -24,14 +25,18 @@ func main() {
 	}
 	defer database.Close()
 
-	// 3. Configurar router básico (Go 1.22+ routing)
+	// 3. Configurar router (Go 1.22+ routing)
 	mux := http.NewServeMux()
 
 	// Ruta de prueba
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status": "ok", "service": "tiendita-pos-api"}`))
 	})
+	
+	// Ruta de productos (inyectamos el pool de la base de datos)
+	mux.HandleFunc("GET /api/products", handlers.GetProducts(database.Pool))
 
 	// 4. Levantar servidor
 	addr := fmt.Sprintf(":%s", cfg.ServerPort)
@@ -53,7 +58,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println(" Apagando servidor...")
+	log.Println("⏳ Apagando servidor...")
 
 	// Timeout de 5 segundos para shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
