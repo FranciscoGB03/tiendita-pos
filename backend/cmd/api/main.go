@@ -12,7 +12,8 @@ import (
 
 	"github.com/pgonbo/tiendita-pos/backend/internal/config"
 	"github.com/pgonbo/tiendita-pos/backend/internal/database"
-	"github.com/pgonbo/tiendita-pos/backend/internal/handlers" // Ajustado a internal
+	"github.com/pgonbo/tiendita-pos/backend/internal/handlers"
+	"github.com/pgonbo/tiendita-pos/backend/internal/middleware" // ← Agregar esta línea
 )
 
 func main() {
@@ -38,11 +39,13 @@ func main() {
 	// Ruta de productos (inyectamos el pool de la base de datos)
 	mux.HandleFunc("GET /api/products", handlers.GetProducts(database.Pool))
 
-	// 4. Levantar servidor
+	// 4. Aplicar middleware CORS y levantar servidor
+	handler := middleware.CORS(mux) // ← Envolver el mux con CORS
+
 	addr := fmt.Sprintf(":%s", cfg.ServerPort)
 	server := &http.Server{
 		Addr:    addr,
-		Handler: mux,
+		Handler: handler, // ← Usar el handler con CORS
 	}
 
 	// Goroutine para shutdown graceful

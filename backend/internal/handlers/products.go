@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pgonbo/tiendita-pos/backend/internal/response"
 )
 
 type Product struct {
@@ -29,7 +29,7 @@ func GetProducts(pool *pgxpool.Pool) http.HandlerFunc {
 
 		rows, err := pool.Query(r.Context(), query)
 		if err != nil {
-			http.Error(w, "Error al consultar la base de datos", http.StatusInternalServerError)
+			response.Error(w, "Error al consultar la base de datos", 500, http.StatusInternalServerError)
 			return
 		}
 		defer rows.Close()
@@ -43,7 +43,7 @@ func GetProducts(pool *pgxpool.Pool) http.HandlerFunc {
 				&p.ImageURL, &p.IsActive, &p.CreatedAt, &p.UpdatedAt,
 			)
 			if err != nil {
-				http.Error(w, "Error al procesar los productos", http.StatusInternalServerError)
+				response.Error(w, "Error al procesar los productos", 500, http.StatusInternalServerError)
 				return
 			}
 			products = append(products, p)
@@ -53,7 +53,6 @@ func GetProducts(pool *pgxpool.Pool) http.HandlerFunc {
 			products = []Product{}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(products)
+		response.Success(w, products, http.StatusOK)
 	}
 }
