@@ -1,11 +1,9 @@
 import { ProductGrid } from '../components/ProductGrid';
-import type { Product } from '../types/Product';
+import { CartTicket } from '../components/CartTicket';
+import { useCart } from '../hooks/useCart';
 
 export const POSPage = () => {
-  // Placeholder para la lógica del carrito (se implementará en el siguiente tema)
-  const handleAddProduct = (product: Product) => {
-    console.log('Producto agregado al carrito:', product.name);
-  };
+  const { items, total, addToCart, updateQuantity, removeFromCart } = useCart();
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
@@ -19,24 +17,18 @@ export const POSPage = () => {
         </header>
         
         <div className="flex-1 overflow-y-auto">
-          <ProductGrid onAddProduct={handleAddProduct} />
+          <ProductGrid onAddToCart={addToCart} />
         </div>
       </main>
 
-      {/* Área Lateral: Carrito (Placeholder) */}
-      {/* Oculto en tablets en vertical, visible en monitores/tablets horizontales */}
+      {/* Panel Lateral: Ticket de Venta */}
       <aside className="w-[400px] bg-white border-l-2 border-gray-200 flex flex-col shadow-lg hidden md:flex">
-        <div className="p-5 border-b-2 border-gray-200 bg-gray-50">
-          <h2 className="text-2xl font-bold text-gray-800">
-            Ticket de Venta
-          </h2>
-        </div>
-        
-        <div className="flex-1 flex items-center justify-center p-6">
-          <p className="text-xl text-gray-500 text-center font-medium">
-            El carrito de compras se integrará en el siguiente paso.
-          </p>
-        </div>
+        <CartTicket 
+          items={items} 
+          total={total} 
+          onUpdateQuantity={updateQuantity} 
+          onRemove={removeFromCart} 
+        />
       </aside>
 
     </div>

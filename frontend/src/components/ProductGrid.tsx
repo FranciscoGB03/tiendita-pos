@@ -3,10 +3,10 @@ import { ProductCard } from './ProductCard';
 import type { Product } from '../types/Product';
 
 interface ProductGridProps {
-  onAddProduct: (product: Product) => void;
+  onAddToCart: (product: Product) => void;
 }
 
-export const ProductGrid = ({ onAddProduct }: ProductGridProps) => {
+export const ProductGrid = ({ onAddToCart }: ProductGridProps) => {
   const { products, isLoading, error } = useProducts();
 
   // Estado de Carga
@@ -44,7 +44,7 @@ export const ProductGrid = ({ onAddProduct }: ProductGridProps) => {
         <ProductCard
           key={product.id}
           product={product}
-          onAdd={onAddProduct}
+          onAdd={onAddToCart}
         />
       ))}
     </div>
