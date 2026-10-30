@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/pgonbo/tiendita-pos/backend/internal/handlers"
+	"github.com/pgonbo/tiendita-pos/backend/internal/middleware"
 	"github.com/pgonbo/tiendita-pos/backend/internal/repositories"
 	"github.com/pgonbo/tiendita-pos/backend/internal/services"
 )
@@ -45,5 +46,5 @@ func Setup(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	// salesHandler := handlers.NewSalesHandler(services.NewSalesService(repositories.NewSalesRepository(pool)))
 	// mux.Handle("POST /api/sales", middleware.Auth(jwtSecret, middleware.RequirePermission("sales.create", salesHandler.Create)))
 
-	return mux
+	return middleware.SecurityHeaders(mux)
 }
