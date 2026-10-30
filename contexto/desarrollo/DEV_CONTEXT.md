@@ -1,7 +1,7 @@
 # 📋 Contexto de Desarrollo (DEV_CONTEXT)
 
 **Fecha de última actualización:** 31 de Octubre de 2026
-**Fase actual:** Desarrollo Activo - Listo para Sprint 4 (Offline + persistencia)
+**Fase actual:** Desarrollo Activo - Sprint 4.A (Lógica de Venta + ID Caja)
 **Sprints completados:** Sprint 1 (Fundación) ✅, Sprint 2 (UI Cobro) ✅, Sprint 3 (Auth + Seguridad) ✅
 **Fuente de verdad de negocio:** `21102026.md`
 
@@ -19,16 +19,15 @@
 [x] Sprint 1: Fundación ✅ CERRADO (23-Oct-2026)
 [x] Sprint 2: Pantalla de cobro responsive ✅ CERRADO (28-Oct-2026)
 [x] Sprint 3: Autenticación y RBAC ✅ CERRADO (31-Oct-2026)
+[~] Sprint 4.A: Lógica Real de Venta + Identificación de Caja 🟡 EN PROGRESO
 
-- SQL: 6 tablas + Seed inicial.
-- Backend: Model, Repository, Service, Handler, Middleware JWT, Router, Security Headers.
-- Frontend: Pantalla de Login, ProtectedRoute, Teclado universal responsive, Identidad Visual Tailwind.
-- Seguridad: CSP estricto (localhost + 192.168.10.101).
-  [ ] Sprint 4: Offline + persistencia
+- Tabla `terminals` y endpoint de validación.
+- Hook `useTerminalId` + Modal de configuración.
+- Endpoint `POST /api/sales` con transacción atómica (ventas, items, pagos, inventario).
+  [ ] Sprint 4.B: Offline + persistencia
 - Dexie.js como wrapper de IndexedDB
-- Cola de sincronización automática (amortiguador temporal)
+- Cola de sincronización automática
 - Indicador de estado de red (online/offline)
-- Reintento inteligente de sincronización
   [ ] Sprint 5: Cierre + reportes + Pruebas reales
 - Sonido de confirmación y reporte diario
 - Lógica de corte de caja
@@ -54,9 +53,10 @@
 
 | Fecha       | Tarea Completada                          | Detalles / Archivos                                                                                                                                     |
 | ----------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 31-Oct-2026 | DECISIÓN: Identificación de Caja ✅       | Se usará `localStorage` + validación contra tabla `terminals` en backend. Si falla o se borra, modal de configuración.                                  |
 | 31-Oct-2026 | Frontend Login UI + Teclado Responsive ✅ | `LoginPage.tsx`, `AlphanumericKeyboard.tsx`, `useIsTouchDevice.ts`, `ProtectedRoute.tsx`. Layout 1 col desktop, 2 col tablet.                           |
-| 31-Oct-2026 | Identidad Visual Tailwind ✅              | `tailwind.config.js` configurado con paleta "La Popular" (primary, secondary, background, text, success, error, neutral).                               |
-| 31-Oct-2026 | Seguridad CSP + Headers ✅                | `index.html` (meta CSP), `internal/middleware/security.go` (X-Frame-Options, X-Content-Type-Options, etc.). IP LAN: 192.168.10.101.                     |
+| 31-Oct-2026 | Identidad Visual Tailwind ✅              | `tailwind.config.js` configurado con paleta "La Popular".                                                                                               |
+| 31-Oct-2026 | Seguridad CSP + Headers ✅                | `index.html` (meta CSP), `internal/middleware/security.go`. IP LAN: 192.168.10.101.                                                                     |
 | 30-Oct-2026 | Backend Auth Completo ✅                  | Model `User`, Repository `GetUserByUsername`, Service `Login`, Handler `POST /api/login`, Middleware `Auth` + `RequirePermission`, Router centralizado. |
 | 30-Oct-2026 | SQL + Seed Auth ✅                        | 6 tablas creadas. Seed: 2 roles, 8 permisos, 4 empleados, 3 usuarios (mama, papa, dev).                                                                 |
 | 30-Oct-2026 | Diseño Auth/RBAC ✅                       | Arquitectura RBAC completa, tabla employees separada. JWT claims: user_id, username, role, permissions[], exp.                                          |
@@ -67,18 +67,18 @@
 | 26-Oct-2026 | Grid de Productos (UI) ✅                 | `Product.ts`, `productService.ts`, `useProducts.ts`, `ProductCard.tsx`, `ProductGrid.tsx`, `POSPage.tsx`.                                               |
 | 26-Oct-2026 | Middleware CORS Backend ✅                | `internal/middleware/cors.go`. Origen permitido: `http://localhost:5173`.                                                                               |
 | 26-Oct-2026 | Helper de Respuestas ✅                   | `internal/response/response.go`. Helpers `Success()` y `Error()`.                                                                                       |
-| 25-Oct-2026 | Definición Arquitectura Backend ✅        | Patrón Handler → Service → Repository → Model.                                                                                                          |
 | 25-Oct-2026 | API Backend (Productos) ✅                | Endpoint `GET /api/products` operativo.                                                                                                                 |
 | 25-Oct-2026 | Cliente HTTP Frontend ✅                  | Wrapper `api.ts` en `frontend/src/lib/`.                                                                                                                |
 | 25-Oct-2026 | Estructura carpetas Frontend ✅           | `components/`, `hooks/`, `lib/`, `pages/`, `services/`, `types/`.                                                                                       |
 | 23-Oct-2026 | Sprint 1 Cerrado ✅                       | Commit inicial, estructura base, DB, Backend y Frontend operativos.                                                                                     |
 
-## 🎯 5. Temas Pendientes / Bloqueantes (Sprint 4)
+## 🎯 5. Temas Pendientes / Bloqueantes (Sprint 4.A)
 
-[ ] Instalación y configuración de Dexie.js.
-[ ] Definir esquema de IndexedDB para `products` y `pending_sales`.
-[ ] Hook `useNetworkStatus` para indicador online/offline.
-[ ] Lógica de sincronización en segundo plano al recuperar conexión.
+[ ] Crear tabla `terminals` en el esquema SQL.
+[ ] Crear endpoint `GET /api/terminals/validate` en backend.
+[ ] Crear hook `useTerminalId.ts` y componente `TerminalConfigModal.tsx` en frontend.
+[ ] Integrar identificación de caja en `POSPage.tsx`.
+[ ] Crear endpoint `POST /api/sales` con transacción atómica.
 
 ## 🗺️ 6. Mapa de Archivos del Proyecto
 
@@ -122,8 +122,9 @@
 | `internal/handlers/auth.go` | Handler `POST /api/login`. Valida método, decodifica JSON, llama al service, retorna token o error 401. |
 | `internal/handlers/products.go` | Handler `GetProducts(pool)`. Query a DB, mapeo a struct `Product`, respuesta estandarizada. |
 
-🏗️ 8. Notas de Arquitectura y Estructura de Carpetas (Fuente de Verdad)
-⚠️ **REGLA:** Respetar esta estructura para evitar archivos desordenados. Siempre preguntar por la estructura actual del archivo a modificar.
+## 🏗️ 8. Notas de Arquitectura y Estructura de Carpetas (Fuente de Verdad)
+
+⚠️ REGLA: Respetar esta estructura para evitar archivos desordenados. Siempre preguntar por la estructura actual del archivo a modificar.
 (Frontend: `assets/`, `components/`, `hooks/`, `lib/`, `pages/`, `services/`, `types/`)
 (Backend: `cmd/api/`, `internal/config/`, `internal/database/`, `internal/handlers/`, `internal/middleware/`, `internal/models/`, `internal/repositories/`, `internal/response/`, `internal/router/`, `internal/services/`)
 
@@ -131,11 +132,8 @@
 
 - **Autenticación:** RBAC completo. Login: `username` + `PIN`/`password`. `credential_hash` NUNCA viaja en API. JWT: 24 horas. `JWT_SECRET` en `infra/.env`.
 - **Empleados vs Usuarios:** Tabla `employees` (RH) independiente de `users` (Auth). `full_name` en `users` es nombre corto para UI.
-- `terminal_id`: Propiedad del dispositivo (`VITE_TERMINAL_ID`).
+- `terminal_id`: Propiedad del dispositivo. Se gestiona vía `localStorage` + validación contra tabla `terminals` en backend.
 - **Base de Datos:** `.env` en `infra/`. Extensión `pgcrypto` habilitada.
 - Frontend: Tailwind CSS v3. Imágenes de productos: URLs del servidor local (`http://localhost:8080` o `http://192.168.10.101:8080`). Puertos: Backend `8080`, Frontend dev `5173`, Postgres `5432`.
 - **UX/UI:** Modal de Pago a pantalla completa. Teclado numérico ≥80px. Carrito: Botón "Vaciar", pantalla de éxito 3s.
-- **Regla de negocio Beta**:
-- Un solo método de pago por venta.
-- Cálculo de cambio en tiempo real solo para efectivo.
-- Comisión terminal: 4.1%.
+- **Regla de negocio Beta:** Un solo método de pago por venta. Comisión terminal: 4.1%.
