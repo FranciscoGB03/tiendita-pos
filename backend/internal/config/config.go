@@ -15,6 +15,7 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	ServerPort string
+	JWTSecret  string
 }
 
 func Load() *Config {
@@ -31,11 +32,17 @@ func Load() *Config {
 		DBPassword: getEnv("POSTGRES_PASSWORD", ""),
 		DBName:     getEnv("POSTGRES_DB", "tiendita_db"),
 		ServerPort: getEnv("SERVER_PORT", "8080"),
+		JWTSecret:  getEnv("JWT_SECRET", ""),
 	}
 
 	// Validación de seguridad
 	if cfg.DBUser == "" || cfg.DBPassword == "" {
 		log.Fatal("❌ ERROR DE SEGURIDAD: POSTGRES_USER y POSTGRES_PASSWORD son obligatorios en infra/.env")
+	}
+	
+	// Validación de seguridad para Auth
+	if cfg.JWTSecret == "" {
+		log.Fatal("❌ ERROR DE SEGURIDAD: JWT_SECRET es obligatorio en infra/.env") // <-- NUEVO
 	}
 
 	return cfg

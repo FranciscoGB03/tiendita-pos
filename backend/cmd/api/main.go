@@ -12,12 +12,12 @@ import (
 
 	"github.com/pgonbo/tiendita-pos/backend/internal/config"
 	"github.com/pgonbo/tiendita-pos/backend/internal/database"
-	"github.com/pgonbo/tiendita-pos/backend/internal/handlers"
-	"github.com/pgonbo/tiendita-pos/backend/internal/middleware" // ← Agregar esta línea
+	"github.com/pgonbo/tiendita-pos/backend/internal/middleware"
+	"github.com/pgonbo/tiendita-pos/backend/internal/router"
 )
 
 func main() {
-	// 1. Cargar configuración
+	// 1. Cargar configuración (incluye JWT_SECRET)
 	cfg := config.Load()
 
 	// 2. Inicializar base de datos
@@ -26,26 +26,17 @@ func main() {
 	}
 	defer database.Close()
 
-	// 3. Configurar router (Go 1.22+ routing)
-	mux := http.NewServeMux()
+	// 3. Configurar rutas (centralizado en el paquete router)
+	appRouter := router.Setup(database.Pool, cfg.JWTSecret)
 
-	// Ruta de prueba
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status": "ok", "service": "tiendita-pos-api"}`))
-	})
-	
-	// Ruta de productos (inyectamos el pool de la base de datos)
-	mux.HandleFunc("GET /api/products", handlers.GetProducts(database.Pool))
+	// 4. Aplicar middleware CORS global
+	handler := middleware.CORS(appRouter)
 
-	// 4. Aplicar middleware CORS y levantar servidor
-	handler := middleware.CORS(mux) // ← Envolver el mux con CORS
-
+	// 5. Levantar servidor
 	addr := fmt.Sprintf(":%s", cfg.ServerPort)
 	server := &http.Server{
 		Addr:    addr,
-		Handler: handler, // ← Usar el handler con CORS
+		Handler: handler,
 	}
 
 	// Goroutine para shutdown graceful
