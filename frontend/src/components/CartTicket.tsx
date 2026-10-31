@@ -1,13 +1,11 @@
-import { useState } from "react";
 import type { CartItem } from "../types/CartItem";
-import { PaymentModal } from "./PaymentModal";
 
 interface CartTicketProps {
   items: CartItem[];
   total: number;
   onUpdateQuantity: (productId: string, delta: number) => void;
   onRemove: (productId: string) => void;
-  onCheckout: (method: "EFECTIVO" | "TARJETA") => void;
+  onCheckout: () => void; //  CAMBIO: Ya no recibe el método, solo avisa que se quiere cobrar
   onClear: () => void;
 }
 
@@ -19,8 +17,6 @@ export const CartTicket = ({
   onCheckout,
   onClear,
 }: CartTicketProps) => {
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-500 p-6 text-center">
@@ -29,11 +25,6 @@ export const CartTicket = ({
       </div>
     );
   }
-
-  const handlePaymentSelect = (method: "EFECTIVO" | "TARJETA") => {
-    onCheckout(method);
-    setShowPaymentModal(false);
-  };
 
   return (
     <div className="flex flex-col h-full bg-white relative">
@@ -87,11 +78,9 @@ export const CartTicket = ({
               >
                 -
               </button>
-
               <span className="w-10 text-center text-[22px] font-bold text-gray-800">
                 {item.quantity}
               </span>
-
               <button
                 onClick={() => onUpdateQuantity(item.id, 1)}
                 className="min-w-[60px] min-h-[60px] flex items-center justify-center bg-blue-50 text-blue-600 border-2 border-blue-200 rounded-xl font-bold text-[24px] active:bg-blue-100 transition-colors"
@@ -135,21 +124,13 @@ export const CartTicket = ({
         </div>
 
         <button
-          onClick={() => setShowPaymentModal(true)}
+          onClick={onCheckout} //  CAMBIO: Solo avisa a POSPage, sin manejar modal interno
           disabled={items.length === 0}
           className="w-full min-h-[70px] bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold text-[24px] rounded-xl shadow-md transition-colors flex items-center justify-center"
         >
           COBRAR
         </button>
       </div>
-
-      {/* Modal de Pago (Componente Extraído) */}
-      <PaymentModal
-        isOpen={showPaymentModal}
-        total={total}
-        onClose={() => setShowPaymentModal(false)}
-        onSelectMethod={handlePaymentSelect}
-      />
     </div>
   );
 };

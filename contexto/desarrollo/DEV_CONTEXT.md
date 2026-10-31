@@ -1,11 +1,9 @@
 ## 📋 Contexto de Desarrollo (DEV_CONTEXT)
 
-**Fecha de última actualización:** 31 de Octubre de 2026
-**Fase actual:** Desarrollo Activo - Sprint 4.A (Identificación de Caja ✅, Lógica de Venta 🟡 EN PROGRESO)
-**Sprints completados:** Sprint 1 (Fundación) ✅, Sprint 2 (UI Cobro) ✅, Sprint 3 (Auth + Seguridad) ✅
+**Fecha de última actualización:** 01 de Noviembre de 2026
+**Fase actual:** Desarrollo Activo - Sprint 4.A ✅ CERRADO. Listo para Sprint 4.B.
+**Sprints completados:** Sprint 1 (Fundación) ✅, Sprint 2 (UI Cobro) ✅, Sprint 3 (Auth + Seguridad) ✅, Sprint 4.A (Lógica de Venta + Caja) ✅
 **Fuente de verdad de negocio:** `21102026.md`
-
-## 📜 1. Reglas de Desarrollo
 
 ## 📜 1. Reglas de Desarrollo
 
@@ -21,16 +19,20 @@
 [x] Sprint 1: Fundación ✅ CERRADO (23-Oct-2026)
 [x] Sprint 2: Pantalla de cobro responsive ✅ CERRADO (28-Oct-2026)
 [x] Sprint 3: Autenticación y RBAC ✅ CERRADO (31-Oct-2026)
-[~] Sprint 4.A: Lógica Real de Venta + Identificación de Caja 🟡 EN PROGRESO
+[~] Sprint 4.A: Lógica Real de Venta + Identificación de Caja ✅ CERRADO (01-Nov-2026)
+✅ Tabla `terminals` y endpoint de validación (`GET /api/terminals/validate`).
+✅ Hook `useTerminalId` + Modal de configuración con fallback offline.
+✅ Endpoint `POST /api/sales` con transacción atómica (ventas, items, pagos, inventario) y lectura dinámica de comisiones.
+✅ Integración frontend completa con blindaje de eventos y manejo de estados de carga/error.
 
-- ✅ Tabla `terminals` y endpoint de validación (`GET /api/terminals/validate`).
-- ✅ Hook `useTerminalId` + Modal de configuración con fallback offline.
-- ⏳ Endpoint `POST /api/sales` con transacción atómica (ventas, items, pagos, inventario).
-  [ ] Sprint 4.B: Offline + persistencia
+[ ] Sprint 4.B: Offline + persistencia
+
 - Dexie.js como wrapper de IndexedDB
 - Cola de sincronización automática
 - Indicador de estado de red (online/offline)
-  [ ] Sprint 5: Cierre + reportes + Pruebas reales
+
+[ ] Sprint 5: Cierre + reportes + Pruebas reales
+
 - Sonido de confirmación y reporte diario
 - Lógica de corte de caja
 - Instalación en Samsung Tab A11+ y pruebas con usuarios finales
@@ -55,6 +57,7 @@
 
 | Fecha       | Tarea Completada                          | Detalles / Archivos                                                                                                                                                             |
 | ----------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 01-Nov-2026 | Sprint 4.A Cerrado ✅                     | Endpoint `POST /api/sales` (Backend atómico) + Integración Frontend (`saleService`, `PaymentModal` blindado, `api.ts` con JWT).                                                 |
 | 31-Oct-2026 | Identificación de Caja (Terminal ID) ✅   | Tabla `terminals`, `handlers/terminal.go`, `hooks/useTerminalId.ts` (con manejo robusto de 404 vs offline), `components/TerminalConfigModal.tsx`, integración en `POSPage.tsx`. |
 | 31-Oct-2026 | Frontend Login UI + Teclado Responsive ✅ | `LoginPage.tsx`, `AlphanumericKeyboard.tsx`, `useIsTouchDevice.ts`, `ProtectedRoute.tsx`. Layout 1 col desktop, 2 col tablet.                                                   |
 | 31-Oct-2026 | Identidad Visual Tailwind ✅              | `tailwind.config.js` configurado con paleta "La Popular".                                                                                                                       |
@@ -74,7 +77,8 @@
 | 25-Oct-2026 | Estructura carpetas Frontend ✅           | `components/`, `hooks/`, `lib/`, `pages/`, `services/`, `types/`.                                                                                                               |
 | 23-Oct-2026 | Sprint 1 Cerrado ✅                       | Commit inicial, estructura base, DB, Backend y Frontend operativos.                                                                                                             |
 
-##🎯 5. Temas Pendientes / Bloqueantes (Sprint 4.A)
+## 🎯 5. Temas Pendientes / Bloqueantes (Sprint 4.A)
+
 [ ] Crear endpoint `POST /api/sales` con transacción atómica (ventas, items, pagos, inventario).
 [ ] Integrar el endpoint de ventas en el frontend (conectar `PaymentModal` o `handleCheckout` con la API).
 
@@ -104,6 +108,7 @@
 | `pages/POSPage.tsx` | Componente `POSPage`. Layout principal con `ProductGrid` y `CartTicket`. Integra hook de terminal y pantalla de éxito. |
 | `pages/LoginPage.tsx` | Componente `LoginPage`. Formulario de auth, manejo de errores inline, integración con teclado virtual. |
 | `App.tsx` | Root component. Envuelve la app en `BrowserRouter` y define rutas (`/login`, `/`). |
+| `services/saleService.ts` | Servicio para crear ventas. Define interfaces `SaleRequest` y `SaleResponse`. Llama a `api.post('/api/sales')`. |
 
 📂 BACKEND (`backend/`)
 | Archivo | Propósito / Claves |
@@ -122,6 +127,11 @@
 | `internal/handlers/auth.go` | Handler `POST /api/login`. Valida método, decodifica JSON, llama al service, retorna token o error 401. |
 | `internal/handlers/products.go` | Handler `GetProducts(pool)`. Query a DB, mapeo a struct `Product`, respuesta estandarizada. |
 | `internal/handlers/terminal.go` | Handler `ValidateTerminal(pool)`. Verifica existencia y estado activo de un `terminal_id` en la BD. |
+| `internal/models/sale.go` | Structs `SaleRequest`, `SaleItemReq`, `SalePaymentReq`, `SaleResponse`. |
+| `internal/repositories/sale_repository.go` | `CreateSale(ctx, req)`: Transacción atómica (inserta venta, items, pagos, actualiza stock y registra `inventory_movements`). Lee `card_commission_rate` de `settings`. |
+| `internal/services/sale_service.go` | `SaleService`: Capa de orquestación que delega la transacción al repositorio. |
+| `internal/handlers/sale.go` | Handler `POST /api/sales`. Validación manual de payload (totales, cantidades, métodos de pago). |
+| `internal/router/router.go` | Actualizado para inyectar dependencias de venta y registrar ruta protegida por `Auth` y `RequirePermission("sales.create")`. |
 
 ## 🏗️ 8. Notas de Arquitectura y Estructura de Carpetas (Fuente de Verdad)
 

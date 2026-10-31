@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/pgonbo/tiendita-pos/backend/internal/handlers"
 	"github.com/pgonbo/tiendita-pos/backend/internal/middleware"
 	"github.com/pgonbo/tiendita-pos/backend/internal/repositories"
@@ -30,24 +29,27 @@ func Setup(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	userRepo := repositories.NewUserRepository(pool)
 	authService := services.NewAuthService(userRepo, jwtSecret)
 	authHandler := handlers.NewAuthHandler(authService)
-	
 	mux.HandleFunc("POST /api/login", authHandler.Login)
 
 	// ==========================================
-	// 3. Productos (y futuras rutas)
+	// 3. Productos y Terminales
 	// ==========================================
-	// Asumiendo que GetProducts devuelve un http.HandlerFunc o se adapta a la firma de Go 1.22+
 	mux.HandleFunc("GET /api/products", func(w http.ResponseWriter, r *http.Request) {
 		handlers.GetProducts(pool)(w, r)
 	})
 
-	// 🔒 NUEVO: Validación de Terminales (Cajas)
 	mux.HandleFunc("GET /api/terminals/validate", handlers.ValidateTerminal(pool))
 
-	// NOTA: Cuando agreguemos ventas, reportes, etc., se registran aquí.
-	// Ejemplo futuro: 
-	// salesHandler := handlers.NewSalesHandler(services.NewSalesService(repositories.NewSalesRepository(pool)))
-	// mux.Handle("POST /api/sales", middleware.Auth(jwtSecret, middleware.RequirePermission("sales.create", salesHandler.Create)))
+	// ==========================================
+	// 4. Ventas (Protegidas)
+	// ==========================================
+	saleRepo := repositories.NewSaleRepository(pool)
+	saleService := services.NewSaleService(saleRepo)
+	saleHandler := handlers.NewSaleHandler(saleService)
+
+	// Ruta protegida: requiere JWT válido y permiso 'sales.create'
+	// Ruta protegida: requiere JWT válido y permiso 'sales.create'
+	mux.Handle("POST /api/sales", middleware.Auth(jwtSecret, middleware.RequirePermission("sales.create", http.HandlerFunc(saleHandler.CreateSale))))
 
 	return middleware.SecurityHeaders(mux)
 }
