@@ -1,9 +1,11 @@
-# 📋 Contexto de Desarrollo (DEV_CONTEXT)
+## 📋 Contexto de Desarrollo (DEV_CONTEXT)
 
 **Fecha de última actualización:** 31 de Octubre de 2026
-**Fase actual:** Desarrollo Activo - Sprint 4.A (Lógica de Venta + ID Caja)
+**Fase actual:** Desarrollo Activo - Sprint 4.A (Identificación de Caja ✅, Lógica de Venta 🟡 EN PROGRESO)
 **Sprints completados:** Sprint 1 (Fundación) ✅, Sprint 2 (UI Cobro) ✅, Sprint 3 (Auth + Seguridad) ✅
 **Fuente de verdad de negocio:** `21102026.md`
+
+## 📜 1. Reglas de Desarrollo
 
 ## 📜 1. Reglas de Desarrollo
 
@@ -21,9 +23,9 @@
 [x] Sprint 3: Autenticación y RBAC ✅ CERRADO (31-Oct-2026)
 [~] Sprint 4.A: Lógica Real de Venta + Identificación de Caja 🟡 EN PROGRESO
 
-- Tabla `terminals` y endpoint de validación.
-- Hook `useTerminalId` + Modal de configuración.
-- Endpoint `POST /api/sales` con transacción atómica (ventas, items, pagos, inventario).
+- ✅ Tabla `terminals` y endpoint de validación (`GET /api/terminals/validate`).
+- ✅ Hook `useTerminalId` + Modal de configuración con fallback offline.
+- ⏳ Endpoint `POST /api/sales` con transacción atómica (ventas, items, pagos, inventario).
   [ ] Sprint 4.B: Offline + persistencia
 - Dexie.js como wrapper de IndexedDB
 - Cola de sincronización automática
@@ -51,34 +53,30 @@
 
 ## 📝 4. Bitácora de Progreso (Changelog)
 
-| Fecha       | Tarea Completada                          | Detalles / Archivos                                                                                                                                     |
-| ----------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 31-Oct-2026 | DECISIÓN: Identificación de Caja ✅       | Se usará `localStorage` + validación contra tabla `terminals` en backend. Si falla o se borra, modal de configuración.                                  |
-| 31-Oct-2026 | Frontend Login UI + Teclado Responsive ✅ | `LoginPage.tsx`, `AlphanumericKeyboard.tsx`, `useIsTouchDevice.ts`, `ProtectedRoute.tsx`. Layout 1 col desktop, 2 col tablet.                           |
-| 31-Oct-2026 | Identidad Visual Tailwind ✅              | `tailwind.config.js` configurado con paleta "La Popular".                                                                                               |
-| 31-Oct-2026 | Seguridad CSP + Headers ✅                | `index.html` (meta CSP), `internal/middleware/security.go`. IP LAN: 192.168.10.101.                                                                     |
-| 30-Oct-2026 | Backend Auth Completo ✅                  | Model `User`, Repository `GetUserByUsername`, Service `Login`, Handler `POST /api/login`, Middleware `Auth` + `RequirePermission`, Router centralizado. |
-| 30-Oct-2026 | SQL + Seed Auth ✅                        | 6 tablas creadas. Seed: 2 roles, 8 permisos, 4 empleados, 3 usuarios (mama, papa, dev).                                                                 |
-| 30-Oct-2026 | Diseño Auth/RBAC ✅                       | Arquitectura RBAC completa, tabla employees separada. JWT claims: user_id, username, role, permissions[], exp.                                          |
-| 28-Oct-2026 | Modal de Cobro a Pantalla Completa ✅     | `PaymentModal.tsx`. Flujo de 2 pasos, teclado numérico, cálculo de cambio, soporte teclado físico.                                                      |
-| 28-Oct-2026 | Botón Vaciar Carrito ✅                   | Agregado en header de `CartTicket.tsx`.                                                                                                                 |
-| 28-Oct-2026 | Botón COBRAR + Feedback de Éxito ✅       | Botón en footer de `CartTicket.tsx`. Pantalla verde "¡Venta Registrada!" en `POSPage.tsx` (3s).                                                         |
-| 27-Oct-2026 | Carrito Básico (Frontend) ✅              | `CartItem.ts`, `useCart.ts`, `CartTicket.tsx`.                                                                                                          |
-| 26-Oct-2026 | Grid de Productos (UI) ✅                 | `Product.ts`, `productService.ts`, `useProducts.ts`, `ProductCard.tsx`, `ProductGrid.tsx`, `POSPage.tsx`.                                               |
-| 26-Oct-2026 | Middleware CORS Backend ✅                | `internal/middleware/cors.go`. Origen permitido: `http://localhost:5173`.                                                                               |
-| 26-Oct-2026 | Helper de Respuestas ✅                   | `internal/response/response.go`. Helpers `Success()` y `Error()`.                                                                                       |
-| 25-Oct-2026 | API Backend (Productos) ✅                | Endpoint `GET /api/products` operativo.                                                                                                                 |
-| 25-Oct-2026 | Cliente HTTP Frontend ✅                  | Wrapper `api.ts` en `frontend/src/lib/`.                                                                                                                |
-| 25-Oct-2026 | Estructura carpetas Frontend ✅           | `components/`, `hooks/`, `lib/`, `pages/`, `services/`, `types/`.                                                                                       |
-| 23-Oct-2026 | Sprint 1 Cerrado ✅                       | Commit inicial, estructura base, DB, Backend y Frontend operativos.                                                                                     |
+| Fecha       | Tarea Completada                          | Detalles / Archivos                                                                                                                                                             |
+| ----------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 31-Oct-2026 | Identificación de Caja (Terminal ID) ✅   | Tabla `terminals`, `handlers/terminal.go`, `hooks/useTerminalId.ts` (con manejo robusto de 404 vs offline), `components/TerminalConfigModal.tsx`, integración en `POSPage.tsx`. |
+| 31-Oct-2026 | Frontend Login UI + Teclado Responsive ✅ | `LoginPage.tsx`, `AlphanumericKeyboard.tsx`, `useIsTouchDevice.ts`, `ProtectedRoute.tsx`. Layout 1 col desktop, 2 col tablet.                                                   |
+| 31-Oct-2026 | Identidad Visual Tailwind ✅              | `tailwind.config.js` configurado con paleta "La Popular".                                                                                                                       |
+| 31-Oct-2026 | Seguridad CSP + Headers ✅                | `index.html` (meta CSP), `internal/middleware/security.go`. IP LAN: 192.168.10.101.                                                                                             |
+| 30-Oct-2026 | Backend Auth Completo ✅                  | Model `User`, Repository `GetUserByUsername`, Service `Login`, Handler `POST /api/login`, Middleware `Auth` + `RequirePermission`, Router centralizado.                         |
+| 30-Oct-2026 | SQL + Seed Auth ✅                        | 6 tablas creadas. Seed: 2 roles, 8 permisos, 4 empleados, 3 usuarios (mama, papa, dev).                                                                                         |
+| 30-Oct-2026 | Diseño Auth/RBAC ✅                       | Arquitectura RBAC completa, tabla employees separada. JWT claims: user_id, username, role, permissions[], exp.                                                                  |
+| 28-Oct-2026 | Modal de Cobro a Pantalla Completa ✅     | `PaymentModal.tsx`. Flujo de 2 pasos, teclado numérico, cálculo de cambio, soporte teclado físico.                                                                              |
+| 28-Oct-2026 | Botón Vaciar Carrito ✅                   | Agregado en header de `CartTicket.tsx`.                                                                                                                                         |
+| 28-Oct-2026 | Botón COBRAR + Feedback de Éxito ✅       | Botón en footer de `CartTicket.tsx`. Pantalla verde "¡Venta Registrada!" en `POSPage.tsx` (3s).                                                                                 |
+| 27-Oct-2026 | Carrito Básico (Frontend) ✅              | `CartItem.ts`, `useCart.ts`, `CartTicket.tsx`.                                                                                                                                  |
+| 26-Oct-2026 | Grid de Productos (UI) ✅                 | `Product.ts`, `productService.ts`, `useProducts.ts`, `ProductCard.tsx`, `ProductGrid.tsx`, `POSPage.tsx`.                                                                       |
+| 26-Oct-2026 | Middleware CORS Backend ✅                | `internal/middleware/cors.go`. Origen permitido: `http://localhost:5173`.                                                                                                       |
+| 26-Oct-2026 | Helper de Respuestas ✅                   | `internal/response/response.go`. Helpers `Success()` y `Error()`.                                                                                                               |
+| 25-Oct-2026 | API Backend (Productos) ✅                | Endpoint `GET /api/products` operativo.                                                                                                                                         |
+| 25-Oct-2026 | Cliente HTTP Frontend ✅                  | Wrapper `api.ts` en `frontend/src/lib/`.                                                                                                                                        |
+| 25-Oct-2026 | Estructura carpetas Frontend ✅           | `components/`, `hooks/`, `lib/`, `pages/`, `services/`, `types/`.                                                                                                               |
+| 23-Oct-2026 | Sprint 1 Cerrado ✅                       | Commit inicial, estructura base, DB, Backend y Frontend operativos.                                                                                                             |
 
-## 🎯 5. Temas Pendientes / Bloqueantes (Sprint 4.A)
-
-[ ] Crear tabla `terminals` en el esquema SQL.
-[ ] Crear endpoint `GET /api/terminals/validate` en backend.
-[ ] Crear hook `useTerminalId.ts` y componente `TerminalConfigModal.tsx` en frontend.
-[ ] Integrar identificación de caja en `POSPage.tsx`.
-[ ] Crear endpoint `POST /api/sales` con transacción atómica.
+##🎯 5. Temas Pendientes / Bloqueantes (Sprint 4.A)
+[ ] Crear endpoint `POST /api/sales` con transacción atómica (ventas, items, pagos, inventario).
+[ ] Integrar el endpoint de ventas en el frontend (conectar `PaymentModal` o `handleCheckout` con la API).
 
 ## 🗺️ 6. Mapa de Archivos del Proyecto
 
@@ -88,20 +86,22 @@
 | Archivo | Propósito / Claves |
 |---|---|
 | `assets/logo-la-popular.png` | Logo oficial de la miscelánea. |
-| `lib/api.ts` | Cliente HTTP genérico. Exporta `api.get`, `api.post`, etc. Base URL desde `VITE_API_URL`. |
+| `lib/api.ts` | Cliente HTTP genérico. Exporta `api.get`, `api.post`, etc. y clase `ApiError`. Base URL desde `VITE_API_URL`. |
 | `types/Product.ts` | Interfaz `Product`. |
 | `types/CartItem.ts` | Interfaz `CartItem` (extiende `Product` + `quantity`). |
 | `services/productService.ts` | `productService.getAll()`: Llama a `api.get`, valida formato y retorna `Product[]`. |
 | `hooks/useProducts.ts` | Custom hook `useProducts()`. Retorna `{ products, isLoading, error, refetch }`. |
 | `hooks/useCart.ts` | Custom hook `useCart()`. Maneja estado del carrito. |
 | `hooks/useIsTouchDevice.ts` | Custom hook para detectar dispositivos táctiles (lazy initialization). |
+| `hooks/useTerminalId.ts` | Custom hook para gestionar `terminal_id`. Valida contra backend, maneja caché local y fallback offline. |
 | `components/ProductCard.tsx` | Componente `ProductCard`. Imagen, nombre, precio, botón "AGREGAR". |
 | `components/ProductGrid.tsx` | Componente `ProductGrid`. Grid responsive y estados de carga/error. |
 | `components/CartTicket.tsx` | Componente `CartTicket`. Panel lateral con header, lista de items, controles, total y botón COBRAR. |
 | `components/PaymentModal.tsx` | Componente `PaymentModal`. Modal a pantalla completa, selección de método, teclado numérico, cálculo de cambio. |
 | `components/ProtectedRoute.tsx` | Wrapper para proteger rutas. Redirige a `/login` si no hay token en localStorage. |
 | `components/AlphanumericKeyboard.tsx` | Teclado virtual QWERTY + números. Solo visible en dispositivos táctiles, layout de 2 columnas. |
-| `pages/POSPage.tsx` | Componente `POSPage`. Layout principal con `ProductGrid` y `CartTicket`. Pantalla de éxito. |
+| `components/TerminalConfigModal.tsx` | Modal para configurar el `terminal_id` en primera ejecución o si la validación falla. |
+| `pages/POSPage.tsx` | Componente `POSPage`. Layout principal con `ProductGrid` y `CartTicket`. Integra hook de terminal y pantalla de éxito. |
 | `pages/LoginPage.tsx` | Componente `LoginPage`. Formulario de auth, manejo de errores inline, integración con teclado virtual. |
 | `App.tsx` | Root component. Envuelve la app en `BrowserRouter` y define rutas (`/login`, `/`). |
 
@@ -115,12 +115,13 @@
 | `internal/middleware/auth.go` | Middleware `Auth(jwtSecret)` y `RequirePermission(perm)`. Helper `GetClaimsFromContext()`. |
 | `internal/middleware/security.go` | Función `SecurityHeaders(next http.Handler)`. Aplica CSP, X-Frame-Options, X-Content-Type-Options, etc. |
 | `internal/response/response.go` | Helpers `Success(w, data, status)` y `Error(w, msg, code, status)`. |
-| `internal/router/router.go` | Centraliza rutas. Inyecta dependencias. Registra `/health`, `/api/login`, `/api/products`. Envuelto en `SecurityHeaders`. |
+| `internal/router/router.go` | Centraliza rutas. Inyecta dependencias. Registra `/health`, `/api/login`, `/api/products`, `/api/terminals/validate`. Envuelto en `SecurityHeaders`. |
 | `internal/models/user.go` | Structs `User`, `LoginRequest`, `LoginResponse`. `credential_hash` con `json:"-"`. |
 | `internal/repositories/user_repository.go` | `GetUserByUsername(ctx, username)`: Query con `ARRAY_AGG` para permisos. `UpdateLastLogin`. |
 | `internal/services/auth_service.go` | `Login(ctx, req)`: Valida con bcrypt, genera JWT (24h) con claims. |
 | `internal/handlers/auth.go` | Handler `POST /api/login`. Valida método, decodifica JSON, llama al service, retorna token o error 401. |
 | `internal/handlers/products.go` | Handler `GetProducts(pool)`. Query a DB, mapeo a struct `Product`, respuesta estandarizada. |
+| `internal/handlers/terminal.go` | Handler `ValidateTerminal(pool)`. Verifica existencia y estado activo de un `terminal_id` en la BD. |
 
 ## 🏗️ 8. Notas de Arquitectura y Estructura de Carpetas (Fuente de Verdad)
 
@@ -132,7 +133,7 @@
 
 - **Autenticación:** RBAC completo. Login: `username` + `PIN`/`password`. `credential_hash` NUNCA viaja en API. JWT: 24 horas. `JWT_SECRET` en `infra/.env`.
 - **Empleados vs Usuarios:** Tabla `employees` (RH) independiente de `users` (Auth). `full_name` en `users` es nombre corto para UI.
-- `terminal_id`: Propiedad del dispositivo. Se gestiona vía `localStorage` + validación contra tabla `terminals` en backend.
+- `terminal_id`: Propiedad del dispositivo. Se gestiona vía `localStorage` + validación contra tabla `terminals` en backend. Si falla (404), se fuerza reconfiguración. Si hay error de red, se usa caché local (offline).
 - **Base de Datos:** `.env` en `infra/`. Extensión `pgcrypto` habilitada.
 - Frontend: Tailwind CSS v3. Imágenes de productos: URLs del servidor local (`http://localhost:8080` o `http://192.168.10.101:8080`). Puertos: Backend `8080`, Frontend dev `5173`, Postgres `5432`.
 - **UX/UI:** Modal de Pago a pantalla completa. Teclado numérico ≥80px. Carrito: Botón "Vaciar", pantalla de éxito 3s.

@@ -41,6 +41,9 @@ func Setup(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 		handlers.GetProducts(pool)(w, r)
 	})
 
+	// 🔒 NUEVO: Validación de Terminales (Cajas)
+	mux.HandleFunc("GET /api/terminals/validate", handlers.ValidateTerminal(pool))
+
 	// NOTA: Cuando agreguemos ventas, reportes, etc., se registran aquí.
 	// Ejemplo futuro: 
 	// salesHandler := handlers.NewSalesHandler(services.NewSalesService(repositories.NewSalesRepository(pool)))
