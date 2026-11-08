@@ -1,19 +1,27 @@
-// frontend/src/hooks/useAuth.ts
 import { useState } from "react";
 import { jwtDecode } from "jwt-decode";
 
 interface JwtPayload {
   exp?: number;
+  permissions?: string[];
   [key: string]: unknown;
 }
 
-export function useAuth() {
-  // Inicialización perezosa: se ejecuta solo una vez al montar.
-  const [isValid] = useState<boolean>(() => {
+export interface AuthState {
+  isValid: boolean;
+  permissions: string[];
+}
+
+export interface AuthContext extends AuthState {
+  logout: () => void;
+}
+
+export function useAuth(): AuthContext {
+  const [authState] = useState<AuthState>(() => {
     const token = localStorage.getItem("token");
 
     if (!token) {
-      return false;
+      return { isValid: false, permissions: [] };
     }
 
     try {
@@ -25,16 +33,31 @@ export function useAuth() {
           "🔒 Token expirado detectado. Limpiando solo la sesión...",
         );
         localStorage.removeItem("token");
-        return false;
+        return { isValid: false, permissions: [] };
       }
 
-      return true;
+      return {
+        isValid: true,
+        permissions: Array.isArray(decoded.permissions)
+          ? decoded.permissions
+          : [],
+      };
     } catch (error) {
       console.error("❌ Error al decodificar el token:", error);
       localStorage.removeItem("token");
-      return false;
+      return { isValid: false, permissions: [] };
     }
   });
 
-  return isValid;
+  const logout = () => {
+    console.log("🔒 Cerrando sesión...");
+    localStorage.removeItem("token");
+    window.location.href = "/login";
+  };
+
+  // Siempre retornamos un objeto válido, NUNCA null
+  return {
+    ...authState,
+    logout,
+  };
 }

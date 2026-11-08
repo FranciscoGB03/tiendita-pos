@@ -8,8 +8,11 @@ import { TerminalConfigModal } from "../components/TerminalConfigModal";
 import { saleService } from "../services/saleService";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useSyncQueue } from "../hooks/useSyncQueue";
+import { useSound } from "../hooks/useSound";
+import { useAuth } from "../hooks/useAuth";
 
 export const POSPage = () => {
+  const { logout } = useAuth();
   const { items, total, addToCart, updateQuantity, removeFromCart, clearCart } =
     useCart();
   const [showSuccess, setShowSuccess] = useState(false);
@@ -20,9 +23,9 @@ export const POSPage = () => {
   const { terminalId, isLoading, needsConfiguration, setTerminal } =
     useTerminalId();
 
-  // 🟢🔴 Nuevo hook de estado de red
   const isOnline = useNetworkStatus();
   const { pendingCount, isSyncing } = useSyncQueue();
+  const { play: playSuccessSound } = useSound("/sounds/sale-success.mp3");
 
   if (isLoading) {
     return (
@@ -36,7 +39,6 @@ export const POSPage = () => {
     return <TerminalConfigModal onConfigure={setTerminal} />;
   }
 
-  //  CAMBIO: Ya no recibe 'method', solo abre el modal que vive aquí en POSPage
   const handleCheckout = () => {
     console.log("🛒 [POSPage] Abriendo modal de pago");
     setIsPaymentModalOpen(true);
@@ -97,6 +99,9 @@ export const POSPage = () => {
         );
         setIsPaymentModalOpen(false);
         setShowSuccess(true);
+
+        playSuccessSound();
+
         clearCart();
 
         // Ocultar pantalla de éxito después de 3 segundos
@@ -156,25 +161,27 @@ export const POSPage = () => {
           <p className="text-2xl mt-2">Listo para la siguiente venta</p>
 
           {/* Indicador sutil de modo offline (opcional, pero útil para los padres) */}
-          <div className="mt-4 flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-              />
-            </svg>
-            <span className="text-lg font-semibold">
-              Se sincronizará al reconectar
-            </span>
-          </div>
+          {!isOnline && (
+            <div className="mt-4 flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+                />
+              </svg>
+              <span className="text-lg font-semibold">
+                Se sincronizará al reconectar
+              </span>
+            </div>
+          )}
         </div>
       )}
       {errorMessage && (
@@ -245,11 +252,33 @@ export const POSPage = () => {
                 {isOnline ? "EN LÍNEA" : "OFFLINE"}
               </span>
             </div>
-
             {/* Badge de la caja */}
             <span className="text-sm font-semibold text-neutral bg-neutral/10 px-3 py-1 rounded-full">
               Caja: {terminalId}
             </span>
+            <button
+              onClick={logout}
+              className="flex items-center gap-2 bg-error/10 text-error px-3 py-2 rounded-lg hover:bg-error/20 transition-colors"
+              title="Cerrar sesión"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              <span className="text-sm font-semibold hidden sm:inline">
+                Salir
+              </span>
+            </button>
           </div>
         </header>
         <div className="flex-1 overflow-y-auto">

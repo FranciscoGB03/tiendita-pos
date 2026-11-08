@@ -1,11 +1,12 @@
 import type { CartItem } from "../types/CartItem";
+import { usePermission } from "../hooks/usePermission";
 
 interface CartTicketProps {
   items: CartItem[];
   total: number;
   onUpdateQuantity: (productId: string, delta: number) => void;
   onRemove: (productId: string) => void;
-  onCheckout: () => void; //  CAMBIO: Ya no recibe el método, solo avisa que se quiere cobrar
+  onCheckout: () => void;
   onClear: () => void;
 }
 
@@ -17,6 +18,8 @@ export const CartTicket = ({
   onCheckout,
   onClear,
 }: CartTicketProps) => {
+  const canCreateSales = usePermission("sales.create");
+
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-500 p-6 text-center">
@@ -124,11 +127,16 @@ export const CartTicket = ({
         </div>
 
         <button
-          onClick={onCheckout} //  CAMBIO: Solo avisa a POSPage, sin manejar modal interno
-          disabled={items.length === 0}
-          className="w-full min-h-[70px] bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold text-[24px] rounded-xl shadow-md transition-colors flex items-center justify-center"
+          onClick={onCheckout}
+          disabled={items.length === 0 || !canCreateSales}
+          title={!canCreateSales ? "No tienes permiso para cobrar" : ""}
+          className={`w-full min-h-[70px] font-bold text-[24px] rounded-xl shadow-md transition-colors flex items-center justify-center ${
+            canCreateSales
+              ? "bg-green-600 hover:bg-green-700 active:bg-green-800 text-white"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+          }`}
         >
-          COBRAR
+          {canCreateSales ? "COBRAR" : "SIN PERMISO"}
         </button>
       </div>
     </div>

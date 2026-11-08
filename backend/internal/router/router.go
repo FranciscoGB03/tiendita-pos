@@ -24,11 +24,18 @@ func Setup(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	})
 
 	// ==========================================
-	// 2. Autenticación
+	// Repositorios y Handlers
 	// ==========================================
 	userRepo := repositories.NewUserRepository(pool)
 	authService := services.NewAuthService(userRepo, jwtSecret)
 	authHandler := handlers.NewAuthHandler(authService)
+	reportRepo := repositories.NewReportRepository(pool)
+	reportHandler := handlers.NewReportHandler(reportRepo)
+
+	// ==========================================
+	// 2. Autenticación
+	// ==========================================
+
 	mux.HandleFunc("POST /api/login", authHandler.Login)
 
 	// ==========================================
@@ -48,8 +55,20 @@ func Setup(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	saleHandler := handlers.NewSaleHandler(saleService)
 
 	// Ruta protegida: requiere JWT válido y permiso 'sales.create'
-	// Ruta protegida: requiere JWT válido y permiso 'sales.create'
 	mux.Handle("POST /api/sales", middleware.Auth(jwtSecret, middleware.RequirePermission("sales.create", http.HandlerFunc(saleHandler.CreateSale))))
+
+	// ==========================================
+	// 5. Reportes (Protegidos)
+	// ==========================================
+	
+	// Requiere JWT válido Y permiso 'cashier.daily_report'
+	mux.Handle("GET /api/reports/daily-summary", 
+		middleware.Auth(jwtSecret, 
+			middleware.RequirePermission("cashier.daily_report", 
+				http.HandlerFunc(reportHandler.GetDailySummary),
+			),
+		),
+	)
 
 	return middleware.SecurityHeaders(mux)
 }
