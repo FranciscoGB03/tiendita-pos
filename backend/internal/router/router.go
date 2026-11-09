@@ -1,3 +1,4 @@
+// backend/internal/router/router.go
 package router
 
 import (
@@ -29,13 +30,13 @@ func Setup(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	userRepo := repositories.NewUserRepository(pool)
 	authService := services.NewAuthService(userRepo, jwtSecret)
 	authHandler := handlers.NewAuthHandler(authService)
+
 	reportRepo := repositories.NewReportRepository(pool)
 	reportHandler := handlers.NewReportHandler(reportRepo)
 
 	// ==========================================
 	// 2. Autenticación
 	// ==========================================
-
 	mux.HandleFunc("POST /api/login", authHandler.Login)
 
 	// ==========================================
@@ -44,7 +45,6 @@ func Setup(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	mux.HandleFunc("GET /api/products", func(w http.ResponseWriter, r *http.Request) {
 		handlers.GetProducts(pool)(w, r)
 	})
-
 	mux.HandleFunc("GET /api/terminals/validate", handlers.ValidateTerminal(pool))
 
 	// ==========================================
@@ -54,18 +54,34 @@ func Setup(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	saleService := services.NewSaleService(saleRepo)
 	saleHandler := handlers.NewSaleHandler(saleService)
 
-	// Ruta protegida: requiere JWT válido y permiso 'sales.create'
-	mux.Handle("POST /api/sales", middleware.Auth(jwtSecret, middleware.RequirePermission("sales.create", http.HandlerFunc(saleHandler.CreateSale))))
+	mux.Handle("POST /api/sales",
+		middleware.Auth(jwtSecret,
+			middleware.RequirePermission("sales.create",
+				http.HandlerFunc(saleHandler.CreateSale),
+			),
+		),
+	)
 
 	// ==========================================
 	// 5. Reportes (Protegidos)
 	// ==========================================
-	
-	// Requiere JWT válido Y permiso 'cashier.daily_report'
-	mux.Handle("GET /api/reports/daily-summary", 
-		middleware.Auth(jwtSecret, 
-			middleware.RequirePermission("cashier.daily_report", 
+	mux.Handle("GET /api/reports/daily-summary",
+		middleware.Auth(jwtSecret,
+			middleware.RequirePermission("cashier.daily_report",
 				http.HandlerFunc(reportHandler.GetDailySummary),
+			),
+		),
+	)
+
+	// ==========================================
+	// 6. 🆕 Lista de Cajeros (Protegido)
+	// ==========================================
+	// Solo usuarios con permiso 'users.view' pueden ver la lista de cajeros
+	// (SUPERVISOR y ADMIN tienen este permiso por defecto)
+	mux.Handle("GET /api/users/cashiers",
+		middleware.Auth(jwtSecret,
+			middleware.RequirePermission("users.view",
+				http.HandlerFunc(handlers.GetActiveCashiers(pool)),
 			),
 		),
 	)

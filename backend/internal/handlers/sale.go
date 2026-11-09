@@ -1,3 +1,4 @@
+// backend/internal/handlers/sale.go
 package handlers
 
 import (
@@ -5,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/pgonbo/tiendita-pos/backend/internal/middleware"
 	"github.com/pgonbo/tiendita-pos/backend/internal/models"
 	"github.com/pgonbo/tiendita-pos/backend/internal/response"
 	"github.com/pgonbo/tiendita-pos/backend/internal/services"
@@ -27,28 +29,46 @@ func (h *SaleHandler) CreateSale(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Decodificar el cuerpo de la petición
+	// 2. Extraer user_id del JWT (el cajero que está haciendo la venta)
+	claims := middleware.GetClaimsFromContext(r)
+	if claims == nil {
+		response.Error(w, "No autorizado", http.StatusUnauthorized, http.StatusUnauthorized)
+		return
+	}
+
+	userID, ok := claims["user_id"].(string)
+	if !ok || userID == "" {
+		response.Error(w, "No se pudo identificar al cajero", http.StatusInternalServerError, http.StatusInternalServerError)
+		return
+	}
+
+	// 3. Decodificar el cuerpo de la petición
 	var req models.SaleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, "Cuerpo de la petición inválido", http.StatusBadRequest, http.StatusBadRequest)
 		return
 	}
 
-	// 3. Validación manual de campos obligatorios
+	// 4. Inyectar el cashier_id desde el JWT (no confiamos en el frontend)
+	req.CashierID = userID
+
+	// 5. Validación manual de campos obligatorios
 	if req.TerminalID == "" {
 		response.Error(w, "El terminal_id es obligatorio", http.StatusBadRequest, http.StatusBadRequest)
 		return
 	}
+
 	if len(req.Items) == 0 {
 		response.Error(w, "La venta debe tener al menos un producto", http.StatusBadRequest, http.StatusBadRequest)
 		return
 	}
+
 	if len(req.Payments) == 0 {
 		response.Error(w, "La venta debe tener al menos un pago", http.StatusBadRequest, http.StatusBadRequest)
 		return
 	}
 
-	// 4. Validar items y calcular total de productos
+	// 6. Validar items y calcular total de productos
 	var totalItems float64
 	for i, item := range req.Items {
 		if item.Quantity <= 0 {
@@ -62,7 +82,7 @@ func (h *SaleHandler) CreateSale(w http.ResponseWriter, r *http.Request) {
 		totalItems += float64(item.Quantity) * item.UnitPriceAtSale
 	}
 
-	// 5. Validar pagos y calcular total pagado
+	// 7. Validar pagos y calcular total pagado
 	var totalPayments float64
 	for i, payment := range req.Payments {
 		if payment.Amount <= 0 {
@@ -76,19 +96,19 @@ func (h *SaleHandler) CreateSale(w http.ResponseWriter, r *http.Request) {
 		totalPayments += payment.Amount
 	}
 
-	// 6. Validar que los pagos cubran exactamente el total de los items (con tolerancia mínima por floats)
+	// 8. Validar que los pagos cubran exactamente el total de los items (con tolerancia mínima por floats)
 	if totalPayments < totalItems-0.01 || totalPayments > totalItems+0.01 {
 		response.Error(w, "El total de los pagos no coincide con el total de los productos", http.StatusBadRequest, http.StatusBadRequest)
 		return
 	}
 
-	// 7. Ejecutar la lógica atómica a través del Service
+	// 9. Ejecutar la lógica atómica a través del Service
 	res, err := h.saleService.CreateSale(r.Context(), &req)
 	if err != nil {
 		response.Error(w, "Error al procesar la venta: "+err.Error(), http.StatusInternalServerError, http.StatusInternalServerError)
 		return
 	}
 
-	// 8. Retornar éxito (201 Created)
+	// 10. Retornar éxito (201 Created)
 	response.Success(w, res, http.StatusCreated)
 }

@@ -1,7 +1,9 @@
+// frontend/src/pages/POSPage.tsx
 import { useState } from "react";
 import { ProductGrid } from "../components/ProductGrid";
 import { CartTicket } from "../components/CartTicket";
 import { PaymentModal } from "../components/PaymentModal";
+import { DailyReportPanel } from "../components/DailyReportPanel"; // 🆕
 import { useCart } from "../hooks/useCart";
 import { useTerminalId } from "../hooks/useTerminalId";
 import { TerminalConfigModal } from "../components/TerminalConfigModal";
@@ -10,19 +12,20 @@ import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useSyncQueue } from "../hooks/useSyncQueue";
 import { useSound } from "../hooks/useSound";
 import { useAuth } from "../hooks/useAuth";
+import { usePermission } from "../hooks/usePermission"; // 🆕
 
 export const POSPage = () => {
   const { logout } = useAuth();
+  const canViewDailyReport = usePermission("cashier.daily_report"); // 🆕
   const { items, total, addToCart, updateQuantity, removeFromCart, clearCart } =
     useCart();
   const [showSuccess, setShowSuccess] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isReportPanelOpen, setIsReportPanelOpen] = useState(false); // 🆕
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
   const { terminalId, isLoading, needsConfiguration, setTerminal } =
     useTerminalId();
-
   const isOnline = useNetworkStatus();
   const { pendingCount, isSyncing } = useSyncQueue();
   const { play: playSuccessSound } = useSound("/sounds/sale-success.mp3");
@@ -46,7 +49,6 @@ export const POSPage = () => {
     setIsProcessing(false);
   };
 
-  // 1. Actualiza la función handlePaymentComplete
   const handlePaymentComplete = async (method: "EFECTIVO" | "TARJETA") => {
     if (isProcessing) {
       console.warn(
@@ -54,7 +56,6 @@ export const POSPage = () => {
       );
       return;
     }
-
     console.log(
       "🚀 [POSPage] handlePaymentComplete INICIADO - Método:",
       method,
@@ -89,7 +90,6 @@ export const POSPage = () => {
         "📤 [POSPage] Enviando petición al backend (o guardando local)...",
       );
 
-      // CAMBIO CLAVE: Usamos el nuevo método con fallback
       const result = await saleService.createSaleWithFallback(saleRequest);
 
       if (result.success) {
@@ -99,20 +99,14 @@ export const POSPage = () => {
         );
         setIsPaymentModalOpen(false);
         setShowSuccess(true);
-
         playSuccessSound();
-
         clearCart();
-
-        // Ocultar pantalla de éxito después de 3 segundos
         setTimeout(() => setShowSuccess(false), 3000);
       } else {
-        // Error real del backend (ej. datos inválidos)
         console.error("❌ [POSPage] ERROR en venta:", result.error);
         setErrorMessage(result.error);
       }
     } catch (error: unknown) {
-      // Fallback por si ocurre algo inesperado fuera del servicio
       console.error("❌ [POSPage] ERROR inesperado en venta:", error);
       setErrorMessage("Error inesperado al procesar la venta");
     } finally {
@@ -130,7 +124,13 @@ export const POSPage = () => {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden relative">
-      {/*  EL MODAL VIVE AQUÍ, CONTROLADO POR POSPage */}
+      {/* 🆕 Panel de Reporte Diario (slide-in) */}
+      <DailyReportPanel
+        isOpen={isReportPanelOpen}
+        onClose={() => setIsReportPanelOpen(false)}
+        terminalId={terminalId}
+      />
+
       {isPaymentModalOpen && (
         <PaymentModal
           isOpen={isPaymentModalOpen}
@@ -159,8 +159,6 @@ export const POSPage = () => {
           </svg>
           <h2 className="text-4xl font-bold">¡Venta Registrada!</h2>
           <p className="text-2xl mt-2">Listo para la siguiente venta</p>
-
-          {/* Indicador sutil de modo offline (opcional, pero útil para los padres) */}
           {!isOnline && (
             <div className="mt-4 flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg">
               <svg
@@ -184,6 +182,7 @@ export const POSPage = () => {
           )}
         </div>
       )}
+
       {errorMessage && (
         <div className="absolute inset-0 bg-error/95 z-50 flex flex-col items-center justify-center text-white">
           <svg
@@ -214,9 +213,7 @@ export const POSPage = () => {
       <main className="flex-1 flex flex-col min-w-0">
         <header className="bg-white shadow-sm p-4 border-b-2 border-neutral/20 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-text">Punto de Venta</h1>
-          {/* Indicadores de estado (Caja + Red + Sync) */}
           <div className="flex items-center gap-3">
-            {/* Contador de sincronización (solo si hay pendientes) */}
             {pendingCount > 0 && (
               <div className="flex items-center gap-2 bg-warning/10 text-warning px-3 py-1 rounded-md animate-pulse">
                 <svg
@@ -241,7 +238,6 @@ export const POSPage = () => {
               </div>
             )}
 
-            {/* Semáforo de red */}
             <div className="flex items-center gap-2">
               <span
                 className={`flex h-3 w-3 rounded-full ${isOnline ? "bg-success" : "bg-error"} animate-pulse`}
@@ -252,10 +248,38 @@ export const POSPage = () => {
                 {isOnline ? "EN LÍNEA" : "OFFLINE"}
               </span>
             </div>
-            {/* Badge de la caja */}
+
             <span className="text-sm font-semibold text-neutral bg-neutral/10 px-3 py-1 rounded-full">
               Caja: {terminalId}
             </span>
+
+            {/* 🆕 Botón de Reporte Diario (solo si tiene permiso) */}
+            {canViewDailyReport && (
+              <button
+                onClick={() => setIsReportPanelOpen(true)}
+                className="flex items-center gap-2 bg-secondary/10 text-secondary px-3 py-2 rounded-lg hover:bg-secondary/20 transition-colors"
+                title="Ver reporte del día"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+                <span className="text-sm font-semibold hidden sm:inline">
+                  Reporte
+                </span>
+              </button>
+            )}
+
             <button
               onClick={logout}
               className="flex items-center gap-2 bg-error/10 text-error px-3 py-2 rounded-lg hover:bg-error/20 transition-colors"
@@ -281,17 +305,19 @@ export const POSPage = () => {
             </button>
           </div>
         </header>
+
         <div className="flex-1 overflow-y-auto">
           <ProductGrid onAddToCart={addToCart} />
         </div>
       </main>
+
       <aside className="w-[400px] bg-white border-l-2 border-neutral/20 flex flex-col shadow-lg hidden md:flex">
         <CartTicket
           items={items}
           total={total}
           onUpdateQuantity={updateQuantity}
           onRemove={removeFromCart}
-          onCheckout={handleCheckout} //  Ahora coincide con la firma () => void
+          onCheckout={handleCheckout}
           onClear={clearCart}
         />
       </aside>

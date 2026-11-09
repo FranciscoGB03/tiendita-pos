@@ -1,3 +1,4 @@
+// backend/internal/repositories/report_repository.go
 package repositories
 
 import (
@@ -28,45 +29,55 @@ func NewReportRepository(pool *pgxpool.Pool) *ReportRepository {
 	return &ReportRepository{pool: pool}
 }
 
-func (r *ReportRepository) GetDailySummary(ctx context.Context, terminalID *string) (*DailySummary, error) {
-	// Usamos CTEs para evitar duplicación de filas al hacer JOIN de items y pagos
+// GetDailySummary retorna el resumen diario filtrando opcionalmente por terminal y/o cajero.
+// Si terminalID es nil, no filtra por caja.
+// Si cashierID es nil, no filtra por cajero.
+func (r *ReportRepository) GetDailySummary(
+	ctx context.Context,
+	terminalID *string,
+	cashierID *string, // 🆕 Nuevo parámetro opcional
+) (*DailySummary, error) {
+	// Query con CTEs para evitar duplicación de filas
+	// 🆕 Agregamos filtro por cashier_id en el CTE daily_sales
 	query := `
-		WITH daily_sales AS (
-			SELECT id, total_bruto, total_neto
-			FROM sales
-			WHERE DATE(created_at) = CURRENT_DATE 
-			  AND status = 'COMPLETED'
-			  AND ($1::text IS NULL OR terminal_id = $1)
-		),
-		sale_costs AS (
-			SELECT si.sale_id, SUM(si.quantity * p.cost_price) as cost
-			FROM sale_items si
-			JOIN products p ON si.product_id = p.id
-			GROUP BY si.sale_id
-		),
-		sale_payments_agg AS (
-			SELECT sale_id,
-				   COALESCE(SUM(amount) FILTER (WHERE payment_method = 'EFECTIVO'), 0) as total_efectivo,
-				   COALESCE(SUM(amount) FILTER (WHERE payment_method = 'TARJETA'), 0) as total_tarjeta,
-				   COALESCE(SUM(terminal_commission), 0) as comisiones
-			FROM sale_payments
-			GROUP BY sale_id
-		)
-		SELECT 
-			COUNT(ds.id) as total_ventas,
-			COALESCE(SUM(ds.total_bruto), 0) as total_bruto,
-			COALESCE(SUM(ds.total_neto), 0) as total_neto,
-			COALESCE(SUM(sc.cost), 0) as costo_total,
-			COALESCE(SUM(spa.total_efectivo), 0) as total_efectivo,
-			COALESCE(SUM(spa.total_tarjeta), 0) as total_tarjeta,
-			COALESCE(SUM(spa.comisiones), 0) as comisiones_terminal
-		FROM daily_sales ds
-		LEFT JOIN sale_costs sc ON ds.id = sc.sale_id
-		LEFT JOIN sale_payments_agg spa ON ds.id = spa.sale_id
-	`
+WITH daily_sales AS (
+    SELECT id, total_bruto, total_neto
+    FROM sales
+    WHERE DATE(created_at) = CURRENT_DATE
+    AND status = 'COMPLETED'
+    AND ($1::text IS NULL OR terminal_id = $1)
+    AND ($2::uuid IS NULL OR cashier_id = $2::uuid)
+),
+sale_costs AS (
+    SELECT si.sale_id, SUM(si.quantity * p.cost_price) as cost
+    FROM sale_items si
+    JOIN products p ON si.product_id = p.id
+    GROUP BY si.sale_id
+),
+sale_payments_agg AS (
+    SELECT sale_id,
+        COALESCE(SUM(amount) FILTER (WHERE payment_method = 'EFECTIVO'), 0) as total_efectivo,
+        COALESCE(SUM(amount) FILTER (WHERE payment_method = 'TARJETA'), 0) as total_tarjeta,
+        COALESCE(SUM(terminal_commission), 0) as comisiones
+    FROM sale_payments
+    GROUP BY sale_id
+)
+SELECT
+    COUNT(ds.id) as total_ventas,
+    COALESCE(SUM(ds.total_bruto), 0) as total_bruto,
+    COALESCE(SUM(ds.total_neto), 0) as total_neto,
+    COALESCE(SUM(sc.cost), 0) as costo_total,
+    COALESCE(SUM(spa.total_efectivo), 0) as total_efectivo,
+    COALESCE(SUM(spa.total_tarjeta), 0) as total_tarjeta,
+    COALESCE(SUM(spa.comisiones), 0) as comisiones_terminal
+FROM daily_sales ds
+LEFT JOIN sale_costs sc ON ds.id = sc.sale_id
+LEFT JOIN sale_payments_agg spa ON ds.id = spa.sale_id
+`
 
 	var summary DailySummary
-	err := r.pool.QueryRow(ctx, query, terminalID).Scan(
+	// 🆕 Pasamos ambos parámetros (terminalID y cashierID) a la query
+	err := r.pool.QueryRow(ctx, query, terminalID, cashierID).Scan(
 		&summary.TotalVentas,
 		&summary.TotalBruto,
 		&summary.TotalNeto,
@@ -75,7 +86,6 @@ func (r *ReportRepository) GetDailySummary(ctx context.Context, terminalID *stri
 		&summary.TotalTarjeta,
 		&summary.ComisionesTerminal,
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("error al obtener resumen diario: %w", err)
 	}
@@ -83,6 +93,5 @@ func (r *ReportRepository) GetDailySummary(ctx context.Context, terminalID *stri
 	// Calcular ganancia neta en memoria: (Total Neto - Costo Total)
 	summary.GananciaNeta = summary.TotalNeto - summary.CostoTotal
 	summary.Date = time.Now().Format("2006-01-02")
-
 	return &summary, nil
 }

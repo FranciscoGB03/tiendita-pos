@@ -1,3 +1,4 @@
+// backend/internal/models/sale.go
 package models
 
 import (
@@ -9,6 +10,7 @@ import (
 // SaleRequest representa la petición que envía el frontend para registrar una venta
 type SaleRequest struct {
 	TerminalID string               `json:"terminal_id"`
+	CashierID  string               `json:"-"`
 	Items      []SaleItemRequest    `json:"items"`
 	Payments   []SalePaymentRequest `json:"payments"`
 }
