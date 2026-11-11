@@ -25,7 +25,7 @@ func Setup(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	})
 
 	// ==========================================
-	// Repositorios y Handlers
+	// Repositorios y Handlers (base)
 	// ==========================================
 	userRepo := repositories.NewUserRepository(pool)
 	authService := services.NewAuthService(userRepo, jwtSecret)
@@ -33,6 +33,10 @@ func Setup(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 
 	reportRepo := repositories.NewReportRepository(pool)
 	reportHandler := handlers.NewReportHandler(reportRepo)
+
+	// Repositorio y Handler de Cortes de Caja
+	cashCutRepo := repositories.NewCashCutRepository(pool)
+	cashCutHandler := handlers.NewCashCutHandler(cashCutRepo)
 
 	// ==========================================
 	// 2. Autenticación
@@ -74,14 +78,35 @@ func Setup(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	)
 
 	// ==========================================
-	// 6. 🆕 Lista de Cajeros (Protegido)
+	// 6. Lista de Cajeros (Protegido)
 	// ==========================================
-	// Solo usuarios con permiso 'users.view' pueden ver la lista de cajeros
-	// (SUPERVISOR y ADMIN tienen este permiso por defecto)
 	mux.Handle("GET /api/users/cashiers",
 		middleware.Auth(jwtSecret,
 			middleware.RequirePermission("users.view",
 				http.HandlerFunc(handlers.GetActiveCashiers(pool)),
+			),
+		),
+	)
+
+	// ==========================================
+	// 7. Cortes de Caja (Protegidos)
+	// ==========================================
+	// GET /api/cash-cuts/summary?cashier_id=X&terminal_id=Y
+	// → Retorna el resumen del turno ANTES de hacer el corte
+	mux.Handle("GET /api/cash-cuts/summary",
+		middleware.Auth(jwtSecret,
+			middleware.RequirePermission("cashier.cut",
+				http.HandlerFunc(cashCutHandler.GetTurnSummary),
+			),
+		),
+	)
+
+	// POST /api/cash-cuts
+	// → Registra un nuevo corte de caja
+	mux.Handle("POST /api/cash-cuts",
+		middleware.Auth(jwtSecret,
+			middleware.RequirePermission("cashier.cut",
+				http.HandlerFunc(cashCutHandler.CreateCashCut),
 			),
 		),
 	)

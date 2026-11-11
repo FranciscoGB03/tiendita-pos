@@ -1,5 +1,8 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
+// 🚨 Bandera a nivel de módulo para evitar múltiples redirecciones si fallan varias peticiones a la vez
+let isRedirecting = false;
+
 interface ApiOptions extends RequestInit {
   params?: Record<string, string>;
 }
@@ -54,6 +57,32 @@ async function request<T>(
     } catch {
       errorData = await response.text();
     }
+
+    // 🚨 INTERCEPTOR 401: Sesión expirada o no autorizada
+    if (response.status === 401) {
+      const isLoginRequest = endpoint.includes("/api/login");
+
+      // Solo redirigir si NO es el login y NO hay una redirección en curso
+      if (!isLoginRequest && !isRedirecting) {
+        console.warn(
+          "⚠️ [api.ts] Token expirado o inválido (401). Redirigiendo al login...",
+        );
+        isRedirecting = true;
+
+        // 1. Limpiar sesión
+        localStorage.removeItem("token");
+
+        // 2. Redirección forzada (limpia todo el estado de React y memoria)
+        window.location.href = "/login";
+
+        // 3. Resetear bandera por seguridad (aunque la recarga de página lo limpia de todos modos)
+        setTimeout(() => {
+          isRedirecting = false;
+        }, 2000);
+      }
+    }
+
+    // Lanzar el error para que el componente que hizo la petición también lo sepa (si alcanza a ejecutar algo antes del redirect)
     throw new ApiError(response.status, response.statusText, errorData);
   }
 

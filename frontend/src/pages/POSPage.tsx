@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ProductGrid } from "../components/ProductGrid";
 import { CartTicket } from "../components/CartTicket";
 import { PaymentModal } from "../components/PaymentModal";
-import { DailyReportPanel } from "../components/DailyReportPanel"; // 🆕
+import { DailyReportPanel } from "../components/DailyReportPanel";
 import { useCart } from "../hooks/useCart";
 import { useTerminalId } from "../hooks/useTerminalId";
 import { TerminalConfigModal } from "../components/TerminalConfigModal";
@@ -12,16 +12,19 @@ import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useSyncQueue } from "../hooks/useSyncQueue";
 import { useSound } from "../hooks/useSound";
 import { useAuth } from "../hooks/useAuth";
-import { usePermission } from "../hooks/usePermission"; // 🆕
+import { usePermission } from "../hooks/usePermission";
+import { CashCutModal } from "../components/CashCutModal";
 
 export const POSPage = () => {
   const { logout } = useAuth();
-  const canViewDailyReport = usePermission("cashier.daily_report"); // 🆕
+  const canViewDailyReport = usePermission("cashier.daily_report");
+  const canCutCash = usePermission("cashier.cut");
   const { items, total, addToCart, updateQuantity, removeFromCart, clearCart } =
     useCart();
   const [showSuccess, setShowSuccess] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [isReportPanelOpen, setIsReportPanelOpen] = useState(false); // 🆕
+  const [isCashCutModalOpen, setIsCashCutModalOpen] = useState(false);
+  const [isReportPanelOpen, setIsReportPanelOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { terminalId, isLoading, needsConfiguration, setTerminal } =
@@ -129,6 +132,20 @@ export const POSPage = () => {
         isOpen={isReportPanelOpen}
         onClose={() => setIsReportPanelOpen(false)}
         terminalId={terminalId}
+      />
+
+      {/* Modal de Corte de Caja */}
+      <CashCutModal
+        isOpen={isCashCutModalOpen}
+        onClose={() => setIsCashCutModalOpen(false)}
+        terminalId={terminalId}
+        onSuccess={() => {
+          setIsCashCutModalOpen(false);
+          alert(
+            "✅ Corte de caja registrado exitosamente. La sesión se cerrará por seguridad.",
+          );
+          logout(); // 🚨 Regla de negocio: después del corte, logout forzado
+        }}
       />
 
       {isPaymentModalOpen && (
@@ -253,7 +270,7 @@ export const POSPage = () => {
               Caja: {terminalId}
             </span>
 
-            {/* 🆕 Botón de Reporte Diario (solo si tiene permiso) */}
+            {/* Botón de Reporte Diario (solo si tiene permiso) */}
             {canViewDailyReport && (
               <button
                 onClick={() => setIsReportPanelOpen(true)}
@@ -276,6 +293,32 @@ export const POSPage = () => {
                 </svg>
                 <span className="text-sm font-semibold hidden sm:inline">
                   Reporte
+                </span>
+              </button>
+            )}
+
+            {canCutCash && (
+              <button
+                onClick={() => setIsCashCutModalOpen(true)}
+                className="flex items-center gap-2 bg-error/10 text-error px-3 py-2 rounded-lg hover:bg-error/20 transition-colors border border-error/30"
+                title="Hacer corte de caja"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                </svg>
+                <span className="text-sm font-semibold hidden sm:inline">
+                  Corte
                 </span>
               </button>
             )}

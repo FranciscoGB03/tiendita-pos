@@ -13,6 +13,8 @@
 4. **El usuario marca el ritmo:** No asumir el siguiente paso ni autocompletar tareas no solicitadas.
 5. **Formato de actualización:** Si el archivo crece, dividirlo en partes para evitar errores de copiado.
 6. **Al crear o actualizar archivos:** Siempre preguntar por la estructura actual del archivo a modificar para no sobreescribir lo existente.
+7. **Archivos donde se tienen los queries de la base:** `004_cash_cut.sql`, `003_report.sql`, `002_seed.sql`, `001_schema.sql`
+8. **Antes de hacer cualquier cosas o si se tiene duda sobre la estructura de los archivos a modificar o crear pedirlos antes de asumir**
 
 ## 🏃 2. Sprints (Estado)
 
@@ -25,7 +27,8 @@
 [✅] Sonido de confirmación y RBAC granular frontend/backend base.
 [✅] Migración SQL (Rol SUPERVISOR) y Endpoint Backend de Reporte Diario.
 [✅] Frontend: Panel lateral de Reporte Diario (`DailyReportPanel.tsx`) con filtro por cajero y exportación CSV. ✅ CERRADO (10-Nov-2026)
-[ ] Lógica de corte de caja.
+[✅] Interceptor 401 en `api.ts` (expulsión automática al expirar JWT). ✅ CERRADO (11-Nov-2026)
+[✅] Corte de Caja completo (Backend + Frontend). ✅ CERRADO (11-Nov-2026)
 [ ] Instalación en Samsung Tab A11+ y pruebas con usuarios finales.
 
 ## 🛠️ 3. Stack Técnico (Decisiones de Implementación)
@@ -49,6 +52,10 @@
 
 | Fecha       | Tarea Completada                          | Detalles / Archivos                                                                                                                                                                                                                                                                                                 |
 | ----------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
+| 11-Nov-2026 | Interceptor 401 ✅                        | `frontend/src/lib/api.ts`: Bandera `isRedirecting`, limpieza de `localStorage`, redirección forzada a `/login` (excepto `/api/login`).                                                                                                                                                                              |
+| 11-Nov-2026 | Corte de Caja Backend ✅                  | `backend/internal/models/cash_cut.go`, `backend/internal/repositories/cash_cut_repository.go`, `backend/internal/handlers/cash_cut.go`. Rutas: `GET /api/cash-cuts/summary`, `POST /api/cash-cuts` (protegidas con `cashier.cut`). SQL: `004_cash_cuts.sql` ejecutada.                                              |
+| 11-Nov-2026 | Corte de Caja Frontend ✅                 | `frontend/src/hooks/useCashCut.ts`, `frontend/src/components/CashCutModal.tsx`. Integración en `POSPage.tsx` (botón "Corte" solo para SUPERVISOR/ADMIN). Logout forzado después del corte.                                                                                                                          |
+| 10-Nov-2026 | Panel de Reporte Diario ✅                | `DailyReportPanel.tsx` (slide-in con pills + dropdown), `useDailyReport.ts` (filtro por `cashierId`), `useCashiers.ts`, `exportToCSV.ts`. Backend: `cashier_id` en `sales`, filtro RBAC en `report.go`, endpoint `GET /api/users/cashiers`. SQL: Migración `003_add_cashier_id_to_sales.sql`, permiso `users.view`. |
 | 10-Nov-2026 | Panel de Reporte Diario ✅                | `DailyReportPanel.tsx` (slide-in con pills + dropdown), `useDailyReport.ts` (filtro por `cashierId`), `useCashiers.ts`, `exportToCSV.ts`. Backend: `cashier_id` en `sales`, filtro RBAC en `report.go`, endpoint `GET /api/users/cashiers`. SQL: Migración `003_add_cashier_id_to_sales.sql`, permiso `users.view`. |
 | 08-Nov-2026 | RBAC Granular Frontend ✅                 | `usePermission.ts`, `UnauthorizedPage.tsx`, `ProtectedRoute.tsx` (con `requiredPermission`), `CartTicket.tsx` (botón COBRAR condicional).                                                                                                                                                                           |
 | 08-Nov-2026 | Logout y Sonido ✅                        | `useAuth.ts` (expone `logout`), botón de salir en `POSPage.tsx`. Hook `useSound.ts` + `/sounds/sale-success.mp3`.                                                                                                                                                                                                   |
@@ -114,6 +121,8 @@
 | `hooks/useDailyReport.ts` | Hook para consumir `GET /api/reports/daily-summary` con filtros opcionales `terminalId` y `cashierId`. |
 | `hooks/useCashiers.ts` | Hook para consumir `GET /api/users/cashiers` (lista de cajeros activos). |
 | `lib/exportToCSV.ts` | Utilidad para generar y descargar archivo CSV con BOM UTF-8 para Excel. |
+| `hooks/useCashCut.ts` | Hook para consumir endpoints de corte de caja (`GET /api/cash-cuts/summary`, `POST /api/cash-cuts`). Expone `fetchSummary`, `createCut`, `reset`. |
+| `components/CashCutModal.tsx` | Modal de corte de caja. Selector de cajero, resumen del turno, input de efectivo contado, cálculo de diferencia en tiempo real, observaciones. |
 
 📂 BACKEND ( `backend/` )
 | Archivo | Propósito / Claves |
@@ -139,6 +148,10 @@
 | `internal/handlers/report.go` | Actualizado: Lee query param `cashier_id`, aplica seguridad RBAC (cajero solo ve sus ventas). |
 | `internal/handlers/users.go` | Nuevo: Handler `GetActiveCashiers` lista usuarios activos con rol CAJERO/SUPERVISOR. |
 | `internal/router/router.go` | Actualizado: Ruta `GET /api/users/cashiers` protegida por `users.view`. |
+| `internal/models/cash_cut.go` | Structs `CashCutRequest`, `CashCut`, `TurnSummary`. |
+| `internal/repositories/cash_cut_repository.go` | `GetTurnSummary(ctx, cashierID, terminalID)`, `CreateCashCut(ctx, req, summary, createdBy)`. |
+| `internal/handlers/cash_cut.go` | Handlers `GetTurnSummary`, `CreateCashCut`. Validación de permisos, inyección de `created_by` desde JWT. |
+| `internal/router/router.go` | Actualizado: Rutas `GET /api/cash-cuts/summary` y `POST /api/cash-cuts` protegidas con `cashier.cut`. |
 
 ## 🏗️ 8. Notas de Arquitectura y Estructura de Carpetas (Fuente de Verdad)
 
@@ -155,3 +168,4 @@ Base de Datos:`.env` en `infra/`. Extensión `pgcrypto` habilitada.
 Frontend: Tailwind CSS v3. Imágenes de productos: URLs del servidor local (`http://localhost:8080` o `http://192.168.10.101:8080`). Puertos: Backend `8080`, Frontend dev `5173`, Postgres `5432`.
 UX/UI: Modal de Pago a pantalla completa. Teclado numérico ≥80px. Carrito: Botón "Vaciar", pantalla de éxito 3s. Indicador visual de red (online/offline) y contador de sincronización.
 Regla de negocio Beta: Un solo método de pago por venta. Comisión terminal: 4.1%.
+Zona Horaria: Pendiente configurar PostgreSQL (`ALTER DATABASE tiendita_db SET timezone TO 'America/Mexico_City';`) y el backend Go (`time.LoadLocation("America/Mexico_City")`) para que `CURRENT_DATE` y los cálculos de tiempo coincidan con la hora local del negocio y el Corte de Caja cuadre con el Reporte Diario.
