@@ -17,6 +17,13 @@ import (
 )
 
 func main() {
+	// 0. 🆕 Configurar zona horaria local a México (America/Mexico_City)
+	loc, err := time.LoadLocation("America/Mexico_City")
+	if err != nil {
+		log.Fatalf("❌ Error al cargar la zona horaria: %v", err)
+	}
+	time.Local = loc // Establece esta zona como la predeterminada para time.Now()
+
 	// 1. Cargar configuración (incluye JWT_SECRET)
 	cfg := config.Load()
 
@@ -41,7 +48,7 @@ func main() {
 
 	// Goroutine para shutdown graceful
 	go func() {
-		log.Printf("🚀 Servidor corriendo en http://localhost%s", addr)
+		log.Printf("🚀 Servidor corriendo en http://localhost%s (Zona Horaria: %s)", addr, time.Now().Format("MST"))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("❌ Error al levantar el servidor: %v", err)
 		}
