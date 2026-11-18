@@ -1,9 +1,9 @@
 ## 📋 Contexto de Desarrollo (DEV_CONTEXT)
 
 **Fecha de última actualización:** 18 de Noviembre de 2026
-**Fase actual:** Desarrollo Activo - Sprint 5 EN PROGRESO (Pruebas en hardware).
-**Sprints completados:** Sprint 1 ✅, Sprint 2 ✅, Sprint 3 ✅, Sprint 4.A ✅, Sprint 4.B ✅
-**Fuente de verdad de negocio:**`21102026.md`
+**Fase actual:** Beta Funcional completa. Sprint 5 cerrado. Iniciando Sprint 6 (mejoras UX + admin).
+**Sprints completados:** Sprint 1 ✅, Sprint 2 ✅, Sprint 3 ✅, Sprint 4.A ✅, Sprint 4.B ✅, Sprint 5 ✅
+**Fuente de verdad de negocio:** `21102026.md`
 
 ## 📜 1. Reglas de Desarrollo
 
@@ -29,7 +29,12 @@
 [✅] Frontend: Panel lateral de Reporte Diario (`DailyReportPanel.tsx`) con filtro por cajero y exportación CSV. ✅ CERRADO (10-Nov-2026)
 [✅] Interceptor 401 en `api.ts` (expulsión automática al expirar JWT). ✅ CERRADO (11-Nov-2026)
 [✅] Corte de Caja completo (Backend + Frontend). ✅ CERRADO (11-Nov-2026)
-[ ] Instalación en Samsung Tab A11+ y pruebas con usuarios finales.
+[✅] Bug de zona horaria: Alineado PostgreSQL + Go a `America/Mexico_City`. ✅ CERRADO (18-Nov-2026)
+[✅] PaymentModal: Layout 2 columnas para tablet landscape. ✅ CERRADO (18-Nov-2026)
+[✅] CashCutModal: Contenedor scrolleable con botones fijos. ✅ CERRADO (18-Nov-2026)
+[ ] Sprint 6: Mejoras UX y Panel de Administración
+[ ] Buscador de productos, Favoritos, CRUD Productos, Entradas.
+[ ] Pruebas reales en Samsung Tab A11+.
 
 ## 🛠️ 3. Stack Técnico (Decisiones de Implementación)
 
@@ -52,6 +57,8 @@
 
 | Fecha       | Tarea Completada                          | Detalles / Archivos                                                                                                                                                                                                                                                                                                 |
 | ----------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
+| 18-Nov-2026 | Reacomodo UX Modales ✅                   | `frontend/src/components/PaymentModal.tsx`: Layout 2 columnas (`lg:grid-cols-2`) en paso "amount". `frontend/src/components/CashCutModal.tsx`: Contenedor `max-h-[95vh] flex flex-col`, formulario `overflow-y-auto flex-1`, botones `shrink-0` fijos al fondo.                                                     |
+| 18-Nov-2026 | Zona Horaria ✅                           | `infra/docker-compose.yml`: Variables `TZ` y `PGTZ` = `America/Mexico_City`. `backend/cmd/api/main.go`: `time.LoadLocation("America/Mexico_City")` + `time.Local = loc`. `CURRENT_DATE` y cálculos de tiempo alineados con hora local de México.                                                                    |
 | 11-Nov-2026 | Interceptor 401 ✅                        | `frontend/src/lib/api.ts`: Bandera `isRedirecting`, limpieza de `localStorage`, redirección forzada a `/login` (excepto `/api/login`).                                                                                                                                                                              |
 | 11-Nov-2026 | Corte de Caja Backend ✅                  | `backend/internal/models/cash_cut.go`, `backend/internal/repositories/cash_cut_repository.go`, `backend/internal/handlers/cash_cut.go`. Rutas: `GET /api/cash-cuts/summary`, `POST /api/cash-cuts` (protegidas con `cashier.cut`). SQL: `004_cash_cuts.sql` ejecutada.                                              |
 | 11-Nov-2026 | Corte de Caja Frontend ✅                 | `frontend/src/hooks/useCashCut.ts`, `frontend/src/components/CashCutModal.tsx`. Integración en `POSPage.tsx` (botón "Corte" solo para SUPERVISOR/ADMIN). Logout forzado después del corte.                                                                                                                          |
@@ -168,4 +175,4 @@ Base de Datos:`.env` en `infra/`. Extensión `pgcrypto` habilitada.
 Frontend: Tailwind CSS v3. Imágenes de productos: URLs del servidor local (`http://localhost:8080` o `http://192.168.10.101:8080`). Puertos: Backend `8080`, Frontend dev `5173`, Postgres `5432`.
 UX/UI: Modal de Pago a pantalla completa. Teclado numérico ≥80px. Carrito: Botón "Vaciar", pantalla de éxito 3s. Indicador visual de red (online/offline) y contador de sincronización.
 Regla de negocio Beta: Un solo método de pago por venta. Comisión terminal: 4.1%.
-Zona Horaria: ✅ Configurada a `America/Mexico_City` tanto en PostgreSQL (vía variables de entorno Docker) como en el Backend Go (`time.Local`). Esto garantiza que `CURRENT_DATE`, `CURRENT_TIMESTAMP` y `time.Now()` coincidan con la hora local del negocio, cuadrando Reportes y Cortes de Caja.
+Zona Horaria: ✅ Configurada a `America/Mexico_City` tanto en PostgreSQL (vía variables de entorno Docker `TZ`/`PGTZ`) como en el Backend Go (`time.LoadLocation` + `time.Local`). Esto garantiza que `CURRENT_DATE`, `CURRENT_TIMESTAMP` y `time.Now()` coincidan con la hora local del negocio, cuadrando Reportes y Cortes de Caja.

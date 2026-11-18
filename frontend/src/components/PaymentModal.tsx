@@ -113,9 +113,7 @@ export const PaymentModal = ({
       e.stopPropagation();
       e.nativeEvent.stopImmediatePropagation();
     }
-
     console.log("🖱️ [PaymentModal] Botón COBRAR clickeado");
-
     if (method && canConfirm) {
       console.log(
         "✅ [PaymentModal] Condiciones válidas, llamando a onSelectMethod",
@@ -133,6 +131,9 @@ export const PaymentModal = ({
 
   if (!isOpen) return null;
 
+  // ==========================================
+  // PASO 1: Selección de método (sin cambios)
+  // ==========================================
   if (step === "method") {
     return (
       <div
@@ -150,9 +151,11 @@ export const PaymentModal = ({
             ${total.toFixed(2)}
           </p>
         </div>
+
         <h3 className="text-[32px] font-bold text-center text-white mb-10">
           ¿Cómo te van a pagar?
         </h3>
+
         <div className="w-full max-w-2xl grid grid-cols-1 gap-6">
           <button
             onClick={(e) => {
@@ -175,6 +178,7 @@ export const PaymentModal = ({
             💳 TARJETA
           </button>
         </div>
+
         <button
           onClick={(e) => {
             e.preventDefault();
@@ -189,6 +193,10 @@ export const PaymentModal = ({
     );
   }
 
+  // ==========================================
+  // PASO 2: Monto (🆕 Layout de 2 columnas)
+  // Izquierda: montos grandes | Derecha: teclado + COBRAR
+  // ==========================================
   return (
     <div
       className="fixed inset-0 bg-slate-900/95 z-50 flex flex-col p-6 backdrop-blur-md"
@@ -197,7 +205,8 @@ export const PaymentModal = ({
         e.stopPropagation();
       }}
     >
-      <div className="flex justify-between items-center mb-6">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6 shrink-0">
         <button
           onClick={(e) => {
             e.preventDefault();
@@ -216,62 +225,73 @@ export const PaymentModal = ({
         <div className="w-32"></div>
       </div>
 
-      <div className="flex-1 flex flex-col justify-center items-center space-y-6">
-        <div className="text-center">
-          <p className="text-gray-400 text-[22px] font-medium">
-            Total a cobrar
-          </p>
-          <p className="text-white text-[56px] font-bold">
-            ${total.toFixed(2)}
-          </p>
-        </div>
-        <div className="text-center">
-          <p className="text-gray-400 text-[22px] font-medium">Recibido</p>
-          <p className="text-white text-[64px] font-bold">
-            ${received.toFixed(2)}
-          </p>
-        </div>
-        {method === "EFECTIVO" && (
+      {/* Contenido en 2 columnas (tablet/desktop) o apilado con scroll (mobile) */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-8 overflow-y-auto lg:overflow-hidden">
+        {/* Columna IZQUIERDA: Montos */}
+        <div className="flex flex-col justify-center items-center space-y-8">
           <div className="text-center">
-            <p className="text-gray-400 text-[22px] font-medium">Cambio</p>
-            <p
-              className={`text-[64px] font-bold ${change >= 0 ? "text-green-400" : "text-red-400"}`}
-            >
-              ${change >= 0 ? change.toFixed(2) : "0.00"}
+            <p className="text-gray-400 text-[24px] font-medium">
+              Total a cobrar
+            </p>
+            <p className="text-white text-[56px] font-bold">
+              ${total.toFixed(2)}
             </p>
           </div>
-        )}
-      </div>
 
-      <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto w-full mb-6">
-        {["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0", "⌫"].map(
-          (key) => (
-            <button
-              key={key}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (key === "⌫") {
-                  handleBackspace();
-                } else {
-                  handleNumber(key);
-                }
-              }}
-              className="h-[80px] bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-white text-[32px] font-bold rounded-xl border-b-4 border-slate-950 transition-all active:translate-y-1 active:border-b-0"
-            >
-              {key}
-            </button>
-          ),
-        )}
-      </div>
+          <div className="text-center">
+            <p className="text-gray-400 text-[24px] font-medium">Recibido</p>
+            <p className="text-white text-[64px] font-bold">
+              ${received.toFixed(2)}
+            </p>
+          </div>
 
-      <button
-        onClick={handleConfirm}
-        disabled={!canConfirm || isProcessing}
-        className="w-full max-w-lg mx-auto h-[80px] bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-[32px] font-bold rounded-xl border-b-4 border-green-800 disabled:border-gray-800 transition-all active:translate-y-1 active:border-b-0 disabled:active:translate-y-0"
-      >
-        {isProcessing ? "PROCESANDO..." : "COBRAR (Enter)"}
-      </button>
+          {method === "EFECTIVO" && (
+            <div className="text-center">
+              <p className="text-gray-400 text-[24px] font-medium">Cambio</p>
+              <p
+                className={`text-[72px] font-bold ${
+                  change >= 0 ? "text-green-400" : "text-red-400"
+                }`}
+              >
+                ${change >= 0 ? change.toFixed(2) : "0.00"}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Columna DERECHA: Teclado + Botón COBRAR siempre visible */}
+        <div className="flex flex-col justify-center items-center">
+          <div className="grid grid-cols-3 gap-4 w-full max-w-md mb-6">
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0", "⌫"].map(
+              (key) => (
+                <button
+                  key={key}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (key === "⌫") {
+                      handleBackspace();
+                    } else {
+                      handleNumber(key);
+                    }
+                  }}
+                  className="h-[80px] bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-white text-[32px] font-bold rounded-xl border-b-4 border-slate-950 transition-all active:translate-y-1 active:border-b-0"
+                >
+                  {key}
+                </button>
+              ),
+            )}
+          </div>
+
+          <button
+            onClick={handleConfirm}
+            disabled={!canConfirm || isProcessing}
+            className="w-full max-w-md h-[80px] bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-[32px] font-bold rounded-xl border-b-4 border-green-800 disabled:border-gray-800 transition-all active:translate-y-1 active:border-b-0 disabled:active:translate-y-0"
+          >
+            {isProcessing ? "PROCESANDO..." : "COBRAR (Enter)"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
